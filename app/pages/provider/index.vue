@@ -10,6 +10,7 @@ const loading = ref(true)
 // Pagination & Filter
 const page = ref(1)
 const limit = ref(10)
+const showMobileFilter = ref(false)
 const filters = reactive({
   nama: '',
   keterangan: '',
@@ -165,12 +166,15 @@ onMounted(() => {
         <h1 class="text-2xl font-bold text-(--ui-text-highlighted)">Daftar Provider</h1>
         <p class="text-(--ui-text-muted) text-sm mt-1">Kelola sumber data drama dan urutannya.</p>
       </div>
-      <UButton label="Tambah Provider" icon="i-lucide-plus" color="secondary"
-        @click="() => { createForm.urutan = total + 1; showCreateModal = true }" />
+      <div class="flex items-center gap-2 w-full sm:w-auto">
+        <UButton label="Filter" icon="i-lucide-filter" color="neutral" variant="outline" class="sm:hidden flex-1 justify-center" @click="showMobileFilter = !showMobileFilter" />
+        <UButton label="Tambah Provider" icon="i-lucide-plus" color="secondary" class="flex-1 sm:flex-none justify-center"
+          @click="() => { createForm.urutan = total + 1; showCreateModal = true }" />
+      </div>
     </div>
 
     <!-- Filters -->
-    <UCard>
+    <UCard :class="showMobileFilter ? 'block' : 'hidden sm:block'">
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <UFormField label="Cari Nama">
           <UInput v-model="filters.nama" placeholder="Nama provider..." icon="i-lucide-search" @input="onFilterChange"
@@ -260,11 +264,11 @@ onMounted(() => {
         </template>
       </UTable>
 
-      <div v-if="total > 0" class="border-t border-(--ui-border) p-4 flex items-center justify-between">
+      <div v-if="total > 0" class="border-t border-(--ui-border) p-4 flex items-center justify-between gap-2 flex-wrap">
         <div class="text-sm text-(--ui-text-muted)">
           Total: <span class="font-medium text-(--ui-text-highlighted)">{{ total }}</span> provider
         </div>
-        <UPagination v-model:page="page" :total="total" :items-per-page="limit" active-color="secondary"/>
+        <UPagination v-model:page="page" :total="total" :items-per-page="limit" :sibling-count="0" show-edges active-color="secondary"/>
       </div>
     </UCard>
 

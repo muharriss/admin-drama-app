@@ -1,15 +1,19 @@
 <script setup>
-const { getPengguna } = usePenggunaApi()
+const { getPengguna, getWatchTime } = usePenggunaApi()
 const toast = useToast()
 
-// State
+// ─── Active Tab ─────────────────────────────────────────────
+const activeTab = ref('pengguna')
+
+// ─── PENGGUNA STATE ─────────────────────────────────────────
 const pengguna = ref([])
 const total = ref(0)
 const loading = ref(true)
 
-// Pagination & Filter
 const page = ref(1)
 const limit = ref(10)
+const showMobileFilterPengguna = ref(false)
+const showMobileFilterWatchTime = ref(false)
 const filters = reactive({
   nama: '',
   email: '',
@@ -23,10 +27,8 @@ const filters = reactive({
   sortorder: 'desc',
 })
 
-// Modal Filter Tambahan
 const showFilterModal = ref(false)
 
-// Fetch Data
 const fetchData = async () => {
   loading.value = true
   try {
@@ -54,7 +56,6 @@ const fetchData = async () => {
   }
 }
 
-// Watchers
 watch([page, limit], () => {
   fetchData()
 })
@@ -88,7 +89,67 @@ const resetFilters = () => {
   applyAdvancedFilter()
 }
 
-// Table columns
+// ─── WATCH TIME STATE ───────────────────────────────────────
+const watchTimeData = ref([])
+const watchTimeTotal = ref(0)
+const watchTimeLoading = ref(false)
+const watchTimeSummary = ref({ totalSeconds: 0, totalMinutes: 0, totalHours: 0 })
+
+const wtPage = ref(1)
+const wtLimit = ref(10)
+const wtFilters = reactive({
+  year: new Date().getFullYear().toString(),
+  month: 'all',
+  platform: 'all',
+  sortby: 'totalSeconds',
+  sortorder: 'DESC',
+})
+
+const fetchWatchTime = async () => {
+  watchTimeLoading.value = true
+  try {
+    const res = await getWatchTime({
+      page: wtPage.value,
+      limit: wtLimit.value,
+      year: wtFilters.year || undefined,
+      month: wtFilters.month !== 'all' ? wtFilters.month : undefined,
+      platform: wtFilters.platform !== 'all' ? wtFilters.platform : undefined,
+      sortby: wtFilters.sortby,
+      sortorder: wtFilters.sortorder,
+    })
+
+    watchTimeData.value = res.data || []
+    watchTimeTotal.value = res.meta?.pagination?.total || 0
+    watchTimeSummary.value = res.meta?.summary || { totalSeconds: 0, totalMinutes: 0, totalHours: 0 }
+  } catch (err) {
+    toast.add({ title: 'Gagal memuat watch time', description: err.message, color: 'error' })
+  } finally {
+    watchTimeLoading.value = false
+  }
+}
+
+watch([wtPage, wtLimit], () => {
+  fetchWatchTime()
+})
+
+let wtFilterTimeout
+const onWtFilterChange = () => {
+  clearTimeout(wtFilterTimeout)
+  wtFilterTimeout = setTimeout(() => {
+    wtPage.value = 1
+    fetchWatchTime()
+  }, 400)
+}
+
+// Watch time table columns
+const wtColumns = [
+  { accessorKey: 'user', header: 'Pengguna' },
+  { accessorKey: 'period', header: 'Periode' },
+  { accessorKey: 'platform', header: 'Platform' },
+  { accessorKey: 'duration', header: 'Durasi' },
+]
+
+// Pengguna table columns
 const columns = [
   { accessorKey: 'nama', header: 'Pengguna' },
   { accessorKey: 'auth', header: 'Autentikasi' },
@@ -104,6 +165,44 @@ const formatDate = (dateStr) => {
     hour: '2-digit', minute: '2-digit'
   })
 }
+
+const formatDuration = (seconds) => {
+  if (!seconds || seconds <= 0) return '0 detik'
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
+  const parts = []
+  if (h > 0) parts.push(`${h} jam`)
+  if (m > 0) parts.push(`${m} menit`)
+  if (s > 0 && h === 0) parts.push(`${s} detik`)
+  return parts.join(' ')
+}
+
+const monthNames = [
+  '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+]
+
+const monthOptions = [
+  { label: 'Semua Bulan', value: 'all' },
+  ...monthNames.slice(1).map((name, i) => ({ label: name, value: String(i + 1) })),
+]
+
+const yearOptions = (() => {
+  const currentYear = new Date().getFullYear()
+  const years = []
+  for (let y = currentYear; y >= currentYear - 3; y--) {
+    years.push({ label: String(y), value: String(y) })
+  }
+  return years
+})()
+
+// ─── Tab change handler ─────────────────────────────────────
+watch(activeTab, (tab) => {
+  if (tab === 'watchtime' && watchTimeData.value.length === 0) {
+    fetchWatchTime()
+  }
+})
 
 onMounted(() => {
   fetchData()
@@ -122,116 +221,290 @@ onMounted(() => {
         <h1 class="text-2xl font-bold text-(--ui-text-highlighted)">Daftar Pengguna</h1>
         <p class="text-(--ui-text-muted) text-sm mt-1">Data pengguna dari aplikasi klien (Read-only).</p>
       </div>
-      <UButton label="Filter Lanjutan" icon="i-lucide-filter" color="neutral" variant="outline"
-        @click="showFilterModal = true" />
     </div>
 
-    <!-- Quick Filter -->
-    <UCard>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <UFormField label="Cari Nama">
-          <UInput v-model="filters.nama" placeholder="Ketik nama..." icon="i-lucide-search" @input="onFilterChange"
-            class="w-full" color="secondary"/>
-        </UFormField>
+    <!-- Tabs -->
+    <UTabs :items="[
+      { label: 'Pengguna', value: 'pengguna', icon: 'i-lucide-users' },
+      { label: 'Watch Time', value: 'watchtime', icon: 'i-lucide-clock' },
+    ]" v-model="activeTab" color="secondary" variant="link" class="-mb-2">
+    </UTabs>
 
-        <UFormField label="Platform">
-          <USelect v-model="filters.platform" :items="[
-            { label: 'Semua', value: 'all' },
-            { label: 'Android', value: 'android' },
-            { label: 'Telegram', value: 'telegram' },
-          ]" @change="onFilterChange" class="w-full" color="secondary"/>
-        </UFormField>
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- TAB: Pengguna                                   -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <template v-if="activeTab === 'pengguna'">
 
-        <UFormField label="Sort By">
-          <USelect v-model="filters.sortby" :items="[
-            { label: 'Tanggal Daftar', value: 'registeredAt' },
-            { label: 'Nama', value: 'nama' },
-          ]" @change="onFilterChange" class="w-full" color="secondary"/>
-        </UFormField>
-
-        <UFormField label="Sort Order">
-          <USelect v-model="filters.sortorder" :items="[
-            { label: 'Descending', value: 'desc' },
-            { label: 'Ascending', value: 'asc' },
-          ]" @change="onFilterChange" class="w-full" color="secondary"/>
-        </UFormField>
+      <div class="flex items-center  w-full sm:w-auto">
+        <UButton label="Filter" icon="i-lucide-filter" color="neutral" variant="outline"
+          class="sm:hidden flex-1 justify-center w-40" @click="showMobileFilterPengguna = !showMobileFilterPengguna" />
       </div>
-    </UCard>
 
-    <!-- Table -->
-    <UCard :ui="{ body: 'p-0 sm:p-0' }">
-      <UTable :data="pengguna" :columns="columns" :loading="loading" class="w-full">
-        <!-- Nama Cell -->
-        <template #nama-cell="{ row }">
-          <div class="flex items-center gap-3">
-            <UAvatar :src="row.original.photoUrl" :text="row.original.nama ? row.original.nama.substring(0, 2) : '?'"
-              size="sm" />
-            <div>
-              <p class="font-medium text-(--ui-text-highlighted)">{{ row.original.nama || 'Tanpa Nama' }}</p>
-              <p class="text-xs text-(--ui-text-muted)">ID: {{ row.original._id }}</p>
-            </div>
-          </div>
-        </template>
+      <!-- Quick Filter -->
+      <UCard :class="showMobileFilterPengguna ? 'block' : 'hidden sm:block'">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <UFormField label="Cari Nama">
+            <UInput v-model="filters.nama" placeholder="Ketik nama..." icon="i-lucide-search" @input="onFilterChange"
+              class="w-full" color="secondary" />
+          </UFormField>
 
-        <!-- Auth Cell -->
-        <template #auth-cell="{ row }">
-          <div class="flex flex-col gap-1 text-sm">
-            <div v-if="row.original.email" class="flex items-center gap-1.5">
-              <UIcon name="i-lucide-mail" class="size-3.5 text-(--ui-text-muted)" />
-              <span>{{ row.original.email }}</span>
-            </div>
-            <div v-if="row.original.telegramId" class="flex items-center gap-1.5">
-              <UIcon name="i-lucide-send" class="size-3.5 text-blue-500" />
-              <span>TG: {{ row.original.telegramId }}</span>
-            </div>
-            <div v-if="row.original.isLinked" class="flex items-center gap-1.5">
-              <UIcon name="i-lucide-link" class="size-3.5 text-red-500" />
-              <span>Linked</span>
-            </div>
-            <span v-if="!row.original.email && !row.original.telegramId && !row.original.googleId"
-              class="text-(--ui-text-muted) italic">
-              Guest
-            </span>
-          </div>
-        </template>
+          <UFormField label="Platform">
+            <USelect v-model="filters.platform" :items="[
+              { label: 'Semua', value: 'all' },
+              { label: 'Android', value: 'android' },
+              { label: 'Telegram', value: 'telegram' },
+            ]" @change="onFilterChange" class="w-full" color="secondary" />
+          </UFormField>
 
-        <!-- Platform Cell -->
-        <template #platform-cell="{ row }">
-          <UBadge
-            :color="row.original.platform === 'android' ? 'success' : row.original.sourcePlatform === 'telegram' ? 'info' : 'secondary'"
-            variant="subtle" size="sm">
-            {{ row.original.sourcePlatform || 'Unknown' }}
-          </UBadge>
-        </template>
+          <UFormField label="Sort By">
+            <USelect v-model="filters.sortby" :items="[
+              { label: 'Tanggal Daftar', value: 'registeredAt' },
+              { label: 'Nama', value: 'nama' },
+            ]" @change="onFilterChange" class="w-full" color="secondary" />
+          </UFormField>
 
-        <!-- Created At -->
-        <template #registeredAt-cell="{ row }">
-          <span class="text-sm">{{ formatDate(row.original.registeredAt) }}</span>
-        </template>
-
-        <!-- Actions -->
-        <template #actions-cell="{ row }">
-          <UButton color="neutral" variant="ghost" icon="i-lucide-eye" size="sm" :to="`/pengguna/${row.original._id}`" label="Lihat detail"
-            title="Lihat Detail" />
-        </template>
-
-        <template #empty>
-          <div class="py-12 flex flex-col items-center justify-center text-center">
-            <UIcon name="i-lucide-users" class="size-12 text-(--ui-text-muted) mb-4 opacity-50" />
-            <h3 class="text-lg font-medium text-(--ui-text-highlighted)">Tidak ada data pengguna</h3>
-          </div>
-        </template>
-      </UTable>
-
-      <div v-if="total > 0" class="border-t border-(--ui-border) p-4 flex items-center justify-between">
-        <div class="text-sm text-(--ui-text-muted)">
-          Total: <span class="font-medium text-(--ui-text-highlighted)">{{ total.toLocaleString() }}</span> pengguna
+          <UFormField label="Sort Order">
+            <USelect v-model="filters.sortorder" :items="[
+              { label: 'Descending', value: 'desc' },
+              { label: 'Ascending', value: 'asc' },
+            ]" @change="onFilterChange" class="w-full" color="secondary" />
+          </UFormField>
         </div>
-        <UPagination v-model:page="page" :total="total" :items-per-page="limit" active-color="secondary"/>
-      </div>
-    </UCard>
 
-    <!-- Modal Advanced Filter -->
+        <div class="flex justify-end mt-3">
+          <UButton label="Filter Lanjutan" icon="i-lucide-filter" color="neutral" variant="outline" size="sm"
+            @click="showFilterModal = true" />
+        </div>
+      </UCard>
+
+      <!-- Table -->
+      <UCard :ui="{ body: 'p-0 sm:p-0' }">
+        <UTable :data="pengguna" :columns="columns" :loading="loading" class="w-full">
+          <!-- Nama Cell -->
+          <template #nama-cell="{ row }">
+            <div class="flex items-center gap-3">
+              <UAvatar :src="row.original.photoUrl" :text="row.original.nama ? row.original.nama.substring(0, 2) : '?'"
+                size="sm" />
+              <div>
+                <p class="font-medium text-(--ui-text-highlighted)">{{ row.original.nama || 'Tanpa Nama' }}</p>
+                <p class="text-xs text-(--ui-text-muted)">ID: {{ row.original._id }}</p>
+              </div>
+            </div>
+          </template>
+
+          <!-- Auth Cell -->
+          <template #auth-cell="{ row }">
+            <div class="flex flex-col gap-1 text-sm">
+              <div v-if="row.original.email" class="flex items-center gap-1.5">
+                <UIcon name="i-lucide-mail" class="size-3.5 text-(--ui-text-muted)" />
+                <span>{{ row.original.email }}</span>
+              </div>
+              <div v-if="row.original.telegramId" class="flex items-center gap-1.5">
+                <UIcon name="i-lucide-send" class="size-3.5 text-blue-500" />
+                <span>TG: {{ row.original.telegramId }}</span>
+              </div>
+              <div v-if="row.original.isLinked" class="flex items-center gap-1.5">
+                <UIcon name="i-lucide-link" class="size-3.5 text-red-500" />
+                <span>Linked</span>
+              </div>
+              <span v-if="!row.original.email && !row.original.telegramId && !row.original.googleId"
+                class="text-(--ui-text-muted) italic">
+                Guest
+              </span>
+            </div>
+          </template>
+
+          <!-- Platform Cell -->
+          <template #platform-cell="{ row }">
+            <UBadge
+              :color="row.original.sourcePlatform === 'android' ? 'primary' : row.original.sourcePlatform === 'telegram' ? 'info' : 'secondary'"
+              variant="subtle" size="sm">
+              {{ row.original.sourcePlatform || 'Unknown' }}
+            </UBadge>
+          </template>
+
+          <!-- Created At -->
+          <template #registeredAt-cell="{ row }">
+            <span class="text-sm">{{ formatDate(row.original.registeredAt) }}</span>
+          </template>
+
+          <!-- Actions -->
+          <template #actions-cell="{ row }">
+            <UButton color="neutral" variant="ghost" icon="i-lucide-eye" size="sm" :to="`/pengguna/${row.original._id}`"
+              label="Lihat detail" title="Lihat Detail" />
+          </template>
+
+          <template #empty>
+            <div class="py-12 flex flex-col items-center justify-center text-center">
+              <UIcon name="i-lucide-users" class="size-12 text-(--ui-text-muted) mb-4 opacity-50" />
+              <h3 class="text-lg font-medium text-(--ui-text-highlighted)">Tidak ada data pengguna</h3>
+            </div>
+          </template>
+        </UTable>
+
+        <div v-if="total > 0"
+          class="border-t border-(--ui-border) p-4 flex items-center justify-between gap-2 flex-wrap">
+          <div class="text-sm text-(--ui-text-muted)">
+            Total: <span class="font-medium text-(--ui-text-highlighted)">{{ total.toLocaleString() }}</span> pengguna
+          </div>
+          <UPagination v-model:page="page" :total="total" :items-per-page="limit" :sibling-count="0" show-edges
+            active-color="secondary" />
+        </div>
+      </UCard>
+    </template>
+
+    <!-- ═══════════════════════════════════════════════ -->
+    <!-- TAB: Watch Time                                 -->
+    <!-- ═══════════════════════════════════════════════ -->
+    <template v-if="activeTab === 'watchtime'">
+      <!-- Summary Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <UCard :ui="{ body: 'p-4' }">
+          <div class="flex items-center gap-3">
+            <div class="rounded-xl p-2.5 bg-blue-500/10 ring-1 ring-blue-500/20 flex justify-center items-center">
+              <UIcon name="i-lucide-timer" class="size-5 text-blue-400" />
+            </div>
+            <div>
+              <p class="text-xs text-(--ui-text-muted) uppercase tracking-wide font-medium">Total Detik</p>
+              <p class="text-xl font-bold text-(--ui-text-highlighted)">{{
+                watchTimeSummary.totalSeconds?.toLocaleString() || 0 }}</p>
+            </div>
+          </div>
+        </UCard>
+        <UCard :ui="{ body: 'p-4' }">
+          <div class="flex items-center gap-3">
+            <div class="rounded-xl p-2.5 bg-amber-500/10 ring-1 ring-amber-500/20 flex justify-center items-center">
+              <UIcon name="i-lucide-clock-3" class="size-5 text-amber-400" />
+            </div>
+            <div>
+              <p class="text-xs text-(--ui-text-muted) uppercase tracking-wide font-medium">Total Menit</p>
+              <p class="text-xl font-bold text-(--ui-text-highlighted)">{{
+                watchTimeSummary.totalMinutes?.toLocaleString() || 0 }}</p>
+            </div>
+          </div>
+        </UCard>
+        <UCard :ui="{ body: 'p-4' }">
+          <div class="flex items-center gap-3">
+            <div class="rounded-xl p-2.5 bg-emerald-500/10 ring-1 ring-emerald-500/20 flex justify-center items-center">
+              <UIcon name="i-lucide-hourglass" class="size-5 text-emerald-400" />
+            </div>
+            <div>
+              <p class="text-xs text-(--ui-text-muted) uppercase tracking-wide font-medium">Total Jam</p>
+              <p class="text-xl font-bold text-(--ui-text-highlighted)">{{ watchTimeSummary.totalHours?.toLocaleString()
+                || 0 }}</p>
+            </div>
+          </div>
+        </UCard>
+      </div>
+
+      <div class="flex items-center w-full sm:w-auto">
+        <UButton label="Filter" icon="i-lucide-filter" color="neutral" variant="outline"
+          class="sm:hidden flex-1 justify-center w-40" @click="showMobileFilterWatchTime = !showMobileFilterWatchTime" />
+      </div>
+
+      <!-- Watch Time Filters -->
+      <UCard :class="showMobileFilterWatchTime ? 'block' : 'hidden sm:block'">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <UFormField label="Tahun">
+            <USelect v-model="wtFilters.year" :items="yearOptions" @change="onWtFilterChange" class="w-full"
+              color="secondary" />
+          </UFormField>
+
+          <UFormField label="Bulan">
+            <USelect v-model="wtFilters.month" :items="monthOptions" @change="onWtFilterChange" class="w-full"
+              color="secondary" />
+          </UFormField>
+
+          <UFormField label="Platform">
+            <USelect v-model="wtFilters.platform" :items="[
+              { label: 'Semua', value: 'all' },
+              { label: 'Android', value: 'android' },
+              { label: 'Telegram', value: 'telegram' },
+            ]" @change="onWtFilterChange" class="w-full" color="secondary" />
+          </UFormField>
+
+          <UFormField label="Sort By">
+            <USelect v-model="wtFilters.sortby" :items="[
+              { label: 'Durasi Terbanyak', value: 'totalSeconds' },
+              { label: 'Tahun', value: 'year' },
+              { label: 'Bulan', value: 'month' },
+              { label: 'Terakhir Update', value: 'updatedAt' },
+            ]" @change="onWtFilterChange" class="w-full" color="secondary" />
+          </UFormField>
+        </div>
+      </UCard>
+
+      <!-- Watch Time Table -->
+      <UCard :ui="{ body: 'p-0 sm:p-0' }">
+        <UTable :data="watchTimeData" :columns="wtColumns" :loading="watchTimeLoading" class="w-full">
+          <!-- User Cell -->
+          <template #user-cell="{ row }">
+            <div class="flex items-center gap-3">
+              <UAvatar :text="row.original.user?.nama ? row.original.user.nama.substring(0, 2) : '?'" size="sm" />
+              <div>
+                <NuxtLink :to="`/pengguna/${row.original.userId}`"
+                  class="font-medium text-(--ui-text-highlighted) hover:underline">
+                  {{ row.original.user?.nama || 'Tanpa Nama' }}
+                </NuxtLink>
+                <p class="text-xs text-(--ui-text-muted)">
+                  <span v-if="row.original.user?.email">{{ row.original.user.email }}</span>
+                  <span v-else-if="row.original.user?.telegramId">TG: {{ row.original.user.telegramId }}</span>
+                  <span v-else>{{ row.original.user?.sourcePlatform || '—' }}</span>
+                </p>
+              </div>
+            </div>
+          </template>
+
+          <!-- Period Cell -->
+          <template #period-cell="{ row }">
+            <div class="flex items-center gap-2">
+              <UIcon name="i-lucide-calendar" class="size-4 text-(--ui-text-muted)" />
+              <span class="text-sm font-medium">{{ monthNames[row.original.month] || '—' }} {{ row.original.year
+                }}</span>
+            </div>
+          </template>
+
+          <!-- Platform Cell -->
+          <template #platform-cell="{ row }">
+            <UBadge
+              :color="row.original.platform === 'android' ? 'primary' : row.original.platform === 'telegram' ? 'info' : 'secondary'"
+              variant="subtle" size="sm">
+              {{ row.original.platform || 'Unknown' }}
+            </UBadge>
+          </template>
+
+          <!-- Duration Cell -->
+          <template #duration-cell="{ row }">
+            <div>
+              <p class="font-semibold text-(--ui-text-highlighted)">{{ formatDuration(row.original.totalSeconds) }}</p>
+              <p class="text-xs text-(--ui-text-muted)">
+                {{ row.original.totalMinutes?.toFixed(1) }} menit · {{ row.original.totalHours?.toFixed(2) }} jam
+              </p>
+            </div>
+          </template>
+
+          <template #empty>
+            <div class="py-12 flex flex-col items-center justify-center text-center">
+              <UIcon name="i-lucide-clock" class="size-12 text-(--ui-text-muted) mb-4 opacity-50" />
+              <h3 class="text-lg font-medium text-(--ui-text-highlighted)">Tidak ada data watch time</h3>
+              <p class="text-sm text-(--ui-text-muted) mt-1">Coba ubah filter tahun atau bulan.</p>
+            </div>
+          </template>
+        </UTable>
+
+        <div v-if="watchTimeTotal > 0"
+          class="border-t border-(--ui-border) p-4 flex items-center justify-between gap-2 flex-wrap">
+          <div class="text-sm text-(--ui-text-muted)">
+            Total: <span class="font-medium text-(--ui-text-highlighted)">{{ watchTimeTotal.toLocaleString() }}</span>
+            record
+          </div>
+          <UPagination v-model:page="wtPage" :total="watchTimeTotal" :items-per-page="wtLimit" :sibling-count="0"
+            show-edges active-color="secondary" />
+        </div>
+      </UCard>
+    </template>
+
+    <!-- Modal Advanced Filter (Pengguna) -->
     <UModal v-model:open="showFilterModal" title="Filter Lanjutan">
       <template #content>
         <UCard>
@@ -244,15 +517,15 @@ onMounted(() => {
 
           <div class="space-y-4">
             <UFormField label="Email">
-              <UInput v-model="filters.email" placeholder="Cari email..." class="w-full" />
+              <UInput v-model="filters.email" color="secondary" placeholder="Cari email..." class="w-full" />
             </UFormField>
 
             <div class="grid grid-cols-2 gap-4">
               <UFormField label="Telegram ID">
-                <UInput v-model="filters.telegramId" placeholder="ID Telegram..." class="w-full" />
+                <UInput v-model="filters.telegramId" color="secondary" placeholder="ID Telegram..." class="w-full" />
               </UFormField>
               <UFormField label="Google ID">
-                <UInput v-model="filters.googleId" placeholder="ID Google..." class="w-full" />
+                <UInput v-model="filters.googleId" color="secondary" placeholder="ID Google..." class="w-full" />
               </UFormField>
             </div>
 
@@ -261,15 +534,15 @@ onMounted(() => {
                 { label: 'Semua', value: 'all' },
                 { label: 'Terkoneksi', value: 'true' },
                 { label: 'Tidak Terkoneksi', value: 'false' },
-              ]" class="w-full" />
+              ]" class="w-full" color="secondary" />
             </UFormField>
 
             <div class="grid grid-cols-2 gap-4">
               <UFormField label="Daftar Mulai">
-                <UInput type="date" v-model="filters.registeredStartDate" class="w-full" />
+                <UInput type="date" v-model="filters.registeredStartDate" color="secondary" class="w-full" />
               </UFormField>
               <UFormField label="Daftar Sampai">
-                <UInput type="date" v-model="filters.registeredEndDate" class="w-full" />
+                <UInput type="date" v-model="filters.registeredEndDate" color="secondary" class="w-full" />
               </UFormField>
             </div>
 

@@ -121,19 +121,22 @@ async function handleLogout() {
   }
 }
 
-const open = ref(true)
+const open = ref(false)
 
 
 
 </script>
 
 <template>
-    <!-- <UButton @click="() =>open = !open" variant="ghost" color="neutral"  icon="i-tabler-layout-sidebar-left-collapse" class="text-white fixed top-1/2  cursor-pointer z-20 bg-secondary p-1" ></UButton> -->
-     <button @click="() =>open = !open" class="lg:hidden fixed top-1/2  cursor-pointer z-20 bg-secondary text-white rounded-r-xl  font-bold flex justify-center items-center py-1"><UIcon name="i-material-symbols-arrow-menu-open"/></button>
-  
+  <button @click="() => open = !open"
+    class="lg:hidden fixed top-1/2  cursor-pointer z-20 bg-secondary text-white rounded-r-2xl  font-bold flex justify-center items-center py-3">
+    <UIcon name="i-material-symbols-arrow-menu-open" />
+  </button>
+
   <!-- <UDashboardSidebarToggle variant="subtle" class="z-10"/> -->
-  <UDashboardGroup >
-    <UDashboardSidebar v-model:open="open" id="sidebar-main" collapsible :ui="{ footer: 'border-t border-(--ui-border)' }">
+  <UDashboardGroup>
+    <UDashboardSidebar v-model:open="open" id="sidebar-main" collapsible
+      :ui="{ footer: 'border-t border-(--ui-border)' }">
       <!-- Sidebar Header: Logo -->
       <template #header="{ collapsed }">
         <div class="flex items-center gap-2">
@@ -143,7 +146,6 @@ const open = ref(true)
             <img src="/dramabarengicon.svg" alt="logo" class="absolute">
             <UDashboardSidebarCollapse variant="ghost" class="hover:opacity-100 opacity-0 z-20" />
           </div>
-        
 
           <div v-if="!collapsed" class="flex flex-col min-w-0">
             <span class="text-sm font-bold text-(--ui-text-highlighted) truncate">Drama Admin</span>
@@ -151,11 +153,8 @@ const open = ref(true)
           </div>
 
         </div>
-          <UDashboardSidebarCollapse variant="ghost" class="z-30 ml-auto" v-if="!collapsed" />
-          
+        <UDashboardSidebarCollapse variant="ghost" class="z-30 ml-auto" v-if="!collapsed" />
       </template>
-
-      
 
       <!-- Sidebar Body: Navigation -->
       <template #default="{ collapsed }">
@@ -168,7 +167,7 @@ const open = ref(true)
 
       <!-- Sidebar Footer: User Info -->
       <template #footer="{ collapsed }">
-        <UDropdownMenu :items="userMenuItems" :popper="{ placement: 'top-start' }">
+        <UDropdownMenu :items="userMenuItems"  :content="{align: 'start'}"  >
           <UButton color="neutral" variant="ghost" class="w-full" :block="!collapsed" :square="collapsed">
             <template #leading>
               <UAvatar :text="userInitials" size="2xs" />

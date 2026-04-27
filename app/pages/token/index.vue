@@ -7,6 +7,7 @@ const tokens = ref([])
 const loading = ref(true)
 
 // Filter
+const showMobileFilter = ref(false)
 const filters = reactive({
   token: '',
   status: 'all',
@@ -153,11 +154,14 @@ onMounted(() => {
         <h1 class="text-2xl font-bold text-(--ui-text-highlighted)">Daftar Token Bisnis</h1>
         <p class="text-(--ui-text-muted) text-sm mt-1">Kelola API Token untuk diakses oleh client eksternal.</p>
       </div>
-      <UButton label="Buat Token Baru" icon="i-lucide-plus" @click="showCreateModal = true" color="secondary"/>
+       <div class="flex items-center gap-2 w-full sm:w-auto">
+         <UButton label="Filter" icon="i-lucide-filter" color="neutral" variant="outline" class="sm:hidden flex-1 justify-center" @click="showMobileFilter = !showMobileFilter" />
+         <UButton label="Buat Token Baru" icon="i-lucide-plus" @click="showCreateModal = true" color="secondary" class="flex-1 sm:flex-none justify-center"/>
+       </div>
     </div>
 
     <!-- Filter Card -->
-    <UCard>
+    <UCard :class="showMobileFilter ? 'block' : 'hidden sm:block'">
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <UFormField label="Cari Token">
           <UInput v-model="filters.token" placeholder="Token string..." icon="i-lucide-search" @input="onFilterChange"

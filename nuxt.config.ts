@@ -19,6 +19,9 @@ export default defineNuxtConfig({
       proxy: process.env.API_PROXY + "/**",
     },
   },
+  app: {
+    baseURL: "/admin"
+  },
   vite: {
     optimizeDeps: {
       include: [

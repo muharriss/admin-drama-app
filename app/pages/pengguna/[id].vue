@@ -355,9 +355,9 @@ onMounted(() => {
               </div>
             </template>
           </UTable>
-          <div v-if="historiTotal > 0" class="border-t border-(--ui-border) p-4 flex justify-between items-center">
+          <div v-if="historiTotal > 0" class="border-t border-(--ui-border) p-4 flex justify-between items-center gap-2 flex-wrap">
             <span class="text-sm text-(--ui-text-muted)">Total: {{ historiTotal }} riwayat</span>
-            <UPagination v-model:page="historiPage" :total="historiTotal" :items-per-page="10" active-color="secondary"/>
+            <UPagination v-model:page="historiPage" :total="historiTotal" :items-per-page="10" :sibling-count="0" show-edges active-color="secondary"/>
           </div>
         </UCard>
       </div>
@@ -381,9 +381,9 @@ onMounted(() => {
               </div>
             </template>
           </UTable>
-          <div v-if="bookmarkTotal > 0" class="border-t border-(--ui-border) p-4 flex justify-between items-center">
+          <div v-if="bookmarkTotal > 0" class="border-t border-(--ui-border) p-4 flex justify-between items-center gap-2 flex-wrap">
             <span class="text-sm text-(--ui-text-muted)">Total: {{ bookmarkTotal }} bookmark</span>
-            <UPagination v-model:page="bookmarkPage" :total="bookmarkTotal" :items-per-page="10" active-color="secondary"/>
+            <UPagination v-model:page="bookmarkPage" :total="bookmarkTotal" :items-per-page="10" :sibling-count="0" show-edges active-color="secondary"/>
           </div>
         </UCard>
       </div>
@@ -410,9 +410,9 @@ onMounted(() => {
               </div>
             </template>
           </UTable>
-          <div v-if="watchtimeTotal > 0" class="border-t border-(--ui-border) p-4 flex justify-between items-center">
+          <div v-if="watchtimeTotal > 0" class="border-t border-(--ui-border) p-4 flex justify-between items-center gap-2 flex-wrap">
             <span class="text-sm text-(--ui-text-muted)">Total: {{ watchtimeTotal }} data</span>
-            <UPagination v-model:page="watchtimePage" :total="watchtimeTotal" :items-per-page="10" active-color="secondary"/>
+            <UPagination v-model:page="watchtimePage" :total="watchtimeTotal" :items-per-page="10" :sibling-count="0" show-edges active-color="secondary"/>
           </div>
         </UCard>
       </div>

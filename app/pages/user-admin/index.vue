@@ -10,6 +10,7 @@ const loading = ref(true)
 // Pagination & Filter
 const page = ref(1)
 const limit = ref(10)
+const showMobileFilter = ref(false)
 const filters = reactive({
   username: '',
   nama: '',
@@ -124,11 +125,14 @@ onMounted(() => {
         <h1 class="text-2xl font-bold text-(--ui-text-highlighted)">Daftar User Admin</h1>
         <p class="text-(--ui-text-muted) text-sm mt-1">Kelola data pengguna panel admin.</p>
       </div>
-      <UButton label="Tambah User" icon="i-lucide-plus" @click="showCreateModal = true" color="secondary" />
+      <div class="flex items-center gap-2 w-full sm:w-auto">
+        <UButton label="Filter" icon="i-lucide-filter" color="neutral" variant="outline" class="sm:hidden flex-1 justify-center" @click="showMobileFilter = !showMobileFilter" />
+        <UButton label="Tambah User" icon="i-lucide-plus" @click="showCreateModal = true" color="secondary" class="flex-1 sm:flex-none justify-center"/>
+      </div>
     </div>
 
     <!-- Filter Card -->
-    <UCard>
+    <UCard :class="showMobileFilter ? 'block' : 'hidden sm:block'">
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <UFormField label="Filter Username">
           <UInput v-model="filters.username" placeholder="Cari username..." icon="i-lucide-search"
@@ -175,12 +179,12 @@ onMounted(() => {
 
       <!-- Pagination -->
       <div v-if="total > 0"
-        class="border-t border-(--ui-border) p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+        class="border-t border-(--ui-border) p-4 flex items-center justify-between gap-2 flex-wrap">
         <div class="text-sm text-(--ui-text-muted)">
           Menampilkan <span class="font-medium text-(--ui-text-highlighted)">{{ users.length }}</span> dari <span
             class="font-medium text-(--ui-text-highlighted)">{{ total }}</span> user
         </div>
-        <UPagination v-model:page="page" :total="total" :items-per-page="limit" active-color="secondary"/>
+        <UPagination v-model:page="page" :total="total" :items-per-page="limit" :sibling-count="0" show-edges active-color="secondary"/>
       </div>
     </UCard>
 
