@@ -158,7 +158,8 @@ export const useApiFetch = () => {
           localStorage.removeItem('admin_token')
           localStorage.removeItem('admin_user')
         }
-        await router.push('/login')
+        // await router.push('/login')
+        await navigateTo('/login')
       }
 
       throw parsed

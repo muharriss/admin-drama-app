@@ -76,10 +76,12 @@ const handleCreate = async () => {
 
   createLoading.value = true
   try {
-    // Pastikan format date to ISO jika perlu, tapi datetime-local cukup standar.
+    const d = new Date(createForm.expiredAt)
+    const formattedExpiredAt = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+
     const payload = {
       ...createForm,
-      expiredAt: new Date(createForm.expiredAt).toISOString()
+      expiredAt: formattedExpiredAt
     }
     await createToken(payload)
     toast.add({ title: 'Berhasil', description: 'Token berhasil ditambahkan', color: 'success' })

@@ -95,9 +95,12 @@ const handleEdit = async () => {
 
   loadingStates.edit = true
   try {
+    const d = new Date(editForm.expiredAt)
+    const formattedExpiredAt = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+
     const payload = {
       ...editForm,
-      expiredAt: new Date(editForm.expiredAt).toISOString()
+      expiredAt: formattedExpiredAt
     }
     await updateToken(payload)
     toast.add({ title: 'Berhasil', description: 'Data token diupdate', color: 'success' })
