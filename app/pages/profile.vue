@@ -30,6 +30,7 @@ const nameLoading = ref(false)
 const passwordForm = reactive({ lama: '', baru: '', confirm: '' })
 const passwordLoading = ref(false)
 const pwdErrors = ref({})
+const showPassword = ref(false)
 
 // Fetch Profile
 const fetchProfile = async () => {
@@ -248,18 +249,33 @@ onMounted(() => {
             </template>
             <form @submit.prevent="handleUpdatePassword" class="space-y-4 max-w-md">
               <UFormField label="Password Lama" :error="pwdErrors.lama">
-                <UInput v-model="passwordForm.lama" type="password" placeholder="••••••••" :disabled="passwordLoading"
-                  class="w-full" color="secondary"/>
+                <UInput v-model="passwordForm.lama" :type="showPassword ? 'text' : 'password'" placeholder="" :disabled="passwordLoading"
+                  class="w-full" color="secondary" :ui="{ trailing: 'pr-2.5' }">
+                  <template #trailing>
+                    <UButton color="neutral" variant="ghost" :icon="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+                      class="text-(--ui-text-dimmed) hover:bg-transparent active:bg-transparent cursor-pointer" @click="showPassword = !showPassword" :padded="false" tabindex="-1" />
+                  </template>
+                </UInput>
               </UFormField>
 
               <UFormField label="Password Baru" :error="pwdErrors.baru">
-                <UInput v-model="passwordForm.baru" type="password" placeholder="••••••••" :disabled="passwordLoading"
-                  class="w-full" color="secondary"/>
+                <UInput v-model="passwordForm.baru" :type="showPassword ? 'text' : 'password'" placeholder="" :disabled="passwordLoading"
+                  class="w-full" color="secondary" :ui="{ trailing: 'pr-2.5' }">
+                  <template #trailing>
+                    <UButton color="neutral" variant="ghost" :icon="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+                      class="text-(--ui-text-dimmed) hover:bg-transparent active:bg-transparent cursor-pointer" @click="showPassword = !showPassword" :padded="false" tabindex="-1" />
+                  </template>
+                </UInput>
               </UFormField>
 
               <UFormField label="Konfirmasi Password Baru" :error="pwdErrors.confirm">
-                <UInput v-model="passwordForm.confirm" type="password" placeholder="••••••••"
-                  :disabled="passwordLoading" class="w-full" color="secondary"/>
+                <UInput v-model="passwordForm.confirm" :type="showPassword ? 'text' : 'password'" placeholder=""
+                  :disabled="passwordLoading" class="w-full" color="secondary" :ui="{ trailing: 'pr-2.5' }">
+                  <template #trailing>
+                    <UButton color="neutral" variant="ghost" :icon="showPassword ? 'i-lucide-eye-off' : 'i-lucide-eye'"
+                      class="text-(--ui-text-dimmed) hover:bg-transparent active:bg-transparent cursor-pointer" @click="showPassword = !showPassword" :padded="false" tabindex="-1" />
+                  </template>
+                </UInput>
               </UFormField>
 
               <UButton type="submit" label="Perbarui Password" color="warning" :loading="passwordLoading" />
